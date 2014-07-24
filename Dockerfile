@@ -1,5 +1,7 @@
 #
-# Example Dockerfile for http://docs.docker.io/examples/postgresql_service/
+# Example Dockerfile written by Sven Dowideit of Docker Inc.
+# and included as part of the documentation at
+# http://docs.docker.com/examples/postgresql_service/
 #
 # Slightly adapted for a minimal, up-and-running PostgreSQL
 # Docker instance for a demonstration of CollectionSpace
@@ -24,6 +26,9 @@
 
 FROM ubuntu:14.04
 MAINTAINER SvenDowideit@docker.com
+# Note: effects resulting from any deltas from the example
+# posted by Sven Dowideit are solely the responsiblity of
+# the CollectionSpace community, not Sven or Docker Inc.
 
 # TODO: Reference this value more widely below,
 # replacing multiple instances of hard-coded values.
