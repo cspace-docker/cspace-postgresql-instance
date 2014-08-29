@@ -133,12 +133,6 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/9.3/main/postgresql.conf
 EXPOSE 5432
 
 #
-# Add VOLUMEs to allow persistance and backup of configuration, logs,
-# and databases
-#
-VOLUME ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
-
-#
 # Set the default command to run when starting the container.
 #
 # TODO: Specify the data directory and configuration file paths
