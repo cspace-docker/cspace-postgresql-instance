@@ -92,7 +92,7 @@ EXPOSE 5432
 # start the PostgreSQL server, and create a CollectionSpace
 # database administrator user account.
 #
-ADD init_postgresql_cluster.sh /usr/local/bin/init_postgresql_cluster.sh
+ADD init-postgresql-cluster.sh /usr/local/bin/init-postgresql-cluster.sh
 RUN chmod u+x /usr/local/bin/init_postgresql_cluster.sh
 
 #
