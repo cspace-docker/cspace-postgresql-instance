@@ -1,141 +1,101 @@
 #
-# Example Dockerfile written by Sven Dowideit of Docker Inc.
-# and included as part of the documentation at
+# Based on an example Dockerfile written by Sven Dowideit
+# of Docker Inc. and included as part of the documentation at
 # http://docs.docker.com/examples/postgresql_service/
 #
-# Slightly adapted for a minimal, up-and-running PostgreSQL
+# Adapted for a minimal, up-and-running PostgreSQL
 # Docker instance for a demonstration of CollectionSpace
 # running on multiple Docker containers.
 #
 
 #
-# ***
-# IMPORTANT: the default configuration below sets up this
-# PostgreSQL server for global access, in pg_hba.conf,
-# and with a known hard-coded username and password for
-# a database superuser.
+# ***************************************************************
+# IMPORTANT: the default configuration below, and in an
+# an auxiliary shell script called by this Dockerfile, sets
+# up this PostgreSQL server for global access, and with a
+# known hard-coded username and password for a database
+# administrator user.
 #
 # This Dockerfile MUST be revised to remove those security
 # vulnerabilities, for anything other than transient, demo
-# or evaluation use of this container. At the very least,
-# the pg_hba.conf file should permit remote access only
-# from the IP address of a particular CollectionSpace host,
-# and the database superuser name and password should be changed.
-# ***
+# or evaluation use of this container. For instance, the
+# pg_hba.conf file should permit remote access only from
+# the IP address of a particular CollectionSpace host, and
+# the database administrator name and password should be changed.
+# ***************************************************************
 #
 
 FROM ubuntu:14.04
-MAINTAINER SvenDowideit@docker.com
-#
-# Note: effects resulting from any deltas from the example
-# posted by Sven Dowideit are solely the responsiblity of
-# the CollectionSpace community, and not Sven or Docker Inc.
-#
+
+# Set the desired major version of PostgreSQL to be installed.
+ENV PG_MAJOR 9.3
+
+# Set the desired PostgreSQL cluster name
+ENV PG_CLUSTER_NAME main
 
 #
-# TODO: Reference this value more widely below,
-# replacing multiple instances of hard-coded values.
+# Set the username and password for a dedicated database user
+# for administering CollectionSpace.
 #
-ENV PG_VERSION 9.3
+# IMPORTANT: The following are arbitrary, default placeholder
+# values (see security warning above) that you should assume
+# will be published to the entire world.
+#
+ENV DB_CSPACE_ADMIN_NAME u82255c6_5BBa
+ENV DB_CSPACE_ADMIN_PASSWORD p52i39#Cs$%5R5b
 
 #
-# IMPORTANT: Hard-coded values (see security warning above)
-# that will be published publicly in GitHub:
-#
-ENV DB_SUPERUSER_NAME u82255c6_5BBa
-ENV DB_SUPERUSER_PASSWORD p52i39#Cs$%5R5b
-
-#
-# CollectionSpace requires a UTF-8 character encoding.
-#
-# The default locale is for US English; be sure to change
-# the locale's language and/or country/region as needed:
-#
-ENV CHAR_ENCODING en_US.UTF-8
-
-#
-# Generate locale data files for the specified character encoding
-#
-RUN locale-gen $CHAR_ENCODING
-
-#
-# Add the PostgreSQL PGP key to verify their Debian packages.
+# Add the PostgreSQL PGP key to verify PostgreSQL's Debian packages.
 # It should be the same key as https://www.postgresql.org/media/keys/ACCC4CF8.asc
 #
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
 
 #
-# Add PostgreSQL's repository. It contains the most recent stable release
-# of PostgreSQL, ``9.3``.
+# Add PostgreSQL's Personal Package Archive (PPA) repository. Doing
+# so makes it possible to use the standard 'apt-get' installer to
+# install recent stable releases of PostgreSQL, newer than those
+# available via the official repos associated with this Linux distro.
 #
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 
 #
-# Update the Ubuntu and PostgreSQL repository indexes
+# Update the Ubuntu and PostgreSQL repository indexes.
 #
 RUN apt-get update
 
 #
-# Install ``python-software-properties``, ``software-properties-common`` and PostgreSQL 9.3
-# There are some warnings (in red) that show up during the build. You can hide
-# them by prefixing each apt-get statement with DEBIAN_FRONTEND=noninteractive
+# Add a policy rule script that prevents package installation of PostgreSQL
+# from initializing a database cluster and launching the PostgreSQL server.
 #
-RUN apt-get -y -q install python-software-properties software-properties-common
-RUN apt-get -y -q install postgresql-9.3 postgresql-client-9.3 postgresql-contrib-9.3
+ADD policy-rc.d /usr/sbin/policy-rc.d
+RUN chmod u+x /usr/sbin/policy-rc.d
 
 #
-# Drop and re-create the cluster, to change the character encoding
-# for its default set of databases from USASCII to the UTF-8-based
-# encoding specified above.
+# Install dependencies, followed by PostgreSQL's client and server packages,
+# and PostgreSQL contributions.
 #
-# Note: The official Debian and Ubuntu images automatically perform
-# an ``apt-get clean`` after each ``apt-get``
-#
-# TODO: Verify this step is still needed when running under Ubuntu 14.04
-#
-RUN pg_dropcluster $PG_VERSION main && pg_createcluster --locale $CHAR_ENCODING $PG_VERSION main
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y -q install \
+ python-software-properties \
+ software-properties-common
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y -q install \
+  postgresql-$PG_MAJOR \
+  postgresql-client-$PG_MAJOR \
+  postgresql-contrib-$PG_MAJOR
 
 #
-# Run the rest of the commands as the ``postgres`` user created by
-# the ``postgres-9.3`` package when it was ``apt-get installed``
-#
-USER postgres
-
-#
-# Create a PostgreSQL role for the CollectionSpace administrative user.
-# Note: here we use ``&&\`` to run commands one after the other - the ``\``
-# allows the RUN command to span multiple lines.
-#
-RUN /etc/init.d/postgresql start && \
-   psql --command "CREATE USER $DB_SUPERUSER_NAME WITH SUPERUSER PASSWORD '$DB_SUPERUSER_PASSWORD';" 
-
-#
-# Adjust the PostgreSQL host-based access configuration to enable
-# remote connections to the database.
-#
-# IMPORTANT: As noted above, this configuration makes the database
-# world-accessible (within whatever access limitations might
-# externally be imposed by Docker and/or the Docker host).
-#
-# TODO: Replace this configuration with the recommended configuration
-# for CollectionSpace PostgreSQL servers.
-#
-RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.3/main/pg_hba.conf
-
-#
-# And add ``listen_addresses`` to ``/etc/postgresql/9.3/main/postgresql.conf``
-#
-RUN echo "listen_addresses='*'" >> /etc/postgresql/9.3/main/postgresql.conf
-
-#
-# Expose the PostgreSQL port from the container
+# Expose the standard PostgreSQL listening port from the container.
 #
 EXPOSE 5432
 
 #
-# Set the default command to run when starting the container.
+# Add a shell script to initialize the PostgreSQL database cluster,
+# start the PostgreSQL server, and create a CollectionSpace
+# database administrator user account.
 #
-# TODO: Specify the data directory and configuration file paths
-# via ENV values 
+ADD init_postgresql_cluster.sh /usr/local/bin/init_postgresql_cluster.sh
+RUN chmod u+x /usr/local/bin/init_postgresql_cluster.sh
+
 #
-CMD ["/usr/lib/postgresql/9.3/bin/postgres", "-D", "/var/lib/postgresql/9.3/main", "-c", "config_file=/etc/postgresql/9.3/main/postgresql.conf"]
+# Set the default command to run when starting the container. 
+#
+CMD ["/usr/local/bin/init-postgresql-cluster.sh"]
