@@ -59,7 +59,7 @@ fi
 # secure, recommended configuration for CollectionSpace 
 # PostgreSQL servers.
 #
-echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PG_MAJOR/main/pg_hba.conf
+echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME/pg_hba.conf
 
 #
 # Adjust PostgreSQL's configuration to allow for incoming
@@ -69,7 +69,7 @@ echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PG_MAJOR/main/pg_hba.
 # secure, recommended configuration for CollectionSpace 
 # PostgreSQL servers.
 #
-echo "listen_addresses='*'" >> /etc/postgresql/$PG_MAJOR/main/postgresql.conf
+echo "listen_addresses='*'" >> /etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME/postgresql.conf
 
 #
 # Start the PostgreSQL server.
