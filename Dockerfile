@@ -93,7 +93,7 @@ EXPOSE 5432
 # database administrator user account.
 #
 ADD init-postgresql-cluster.sh /usr/local/bin/init-postgresql-cluster.sh
-RUN chmod u+x /usr/local/bin/init_postgresql_cluster.sh
+RUN chmod u+x /usr/local/bin/init-postgresql-cluster.sh
 
 #
 # Set the default command to run when starting the container. 
