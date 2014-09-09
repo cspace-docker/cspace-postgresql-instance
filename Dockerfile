@@ -27,12 +27,6 @@
 
 FROM ubuntu:14.04
 
-# Set the desired major version of PostgreSQL to be installed.
-ENV PG_MAJOR 9.3
-
-# Set the desired PostgreSQL cluster name
-ENV PG_CLUSTER_NAME main
-
 #
 # Set the username and password for a dedicated database user
 # for administering CollectionSpace.
@@ -45,6 +39,33 @@ ENV DB_CSPACE_ADMIN_NAME u82255c6_5BBa
 ENV DB_CSPACE_ADMIN_PASSWORD p52i39#Cs$%5R5b
 
 #
+# Set the desired major version of PostgreSQL to be installed.
+#
+ENV PG_MAJOR 9.3
+
+#
+# Set the desired PostgreSQL cluster name. (Default: 'main')
+#
+ENV PG_CLUSTER_NAME main
+
+#
+# Set the desired locale for a UTF-8 character encoding.
+# (CollectionSpace requires that its PostgreSQL databases
+# use a UTF-8 encoding.)
+#
+# The default locale below is for US English ('en_US'); set
+# the locale's language and/or country/region here as needed:
+#
+ENV PG_CHAR_ENCODING en_US.UTF-8
+
+#
+# Generate locale data files for the specified character encoding,
+# then set the value of the key locale-related environment variable.
+#
+RUN locale-gen $PG_CHAR_ENCODING
+ENV LC_ALL $PG_CHAR_ENCODING
+
+#
 # Add the PostgreSQL PGP key to verify PostgreSQL's Debian packages.
 # It should be the same key as https://www.postgresql.org/media/keys/ACCC4CF8.asc
 #
@@ -53,8 +74,8 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F
 #
 # Add PostgreSQL's Personal Package Archive (PPA) repository. Doing
 # so makes it possible to use the standard 'apt-get' installer to
-# install recent stable releases of PostgreSQL, newer than those
-# available via the official repos associated with this Linux distro.
+# install recent stable releases of PostgreSQL, often newer than those
+# provided by the repos that come standard with this Linux distro.
 #
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 

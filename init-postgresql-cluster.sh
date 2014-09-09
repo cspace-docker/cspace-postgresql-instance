@@ -38,7 +38,7 @@ echo "Checking for required PostgreSQL clustername in environment variable ..."
 #
 echo "Checking for existence of a PostgreSQL database cluster ..."
 PG_CLUSTER_PATH="/var/lib/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME"
-if test "$(ls -A "$PG_CLUSTER_PATH")";
+if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
   then
     echo "Existing PostgreSQL database cluster found at $PG_CLUSTER_PATH ..."
   else
