@@ -115,8 +115,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y -q install \
 # than dropping it via pg_dropcluster, is also prudent to avoid
 # the possibility of deleting a cluster that contains valued data.)
 #
-ENV PG_CLUSTER_TMP=$(mktemp -d)
-ENV PG_CLUSTER_PATH="/var/lib/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME"
+ENV PG_CLUSTER_TMP $(mktemp -d)
+ENV PG_CLUSTER_PATH /var/lib/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME
 RUN echo "Moving existing database cluster to $PG_CLUSTER_TMP ..."
 RUN mv $PG_CLUSTER_PATH $PG_CLUSTER_TMP
 
@@ -124,8 +124,8 @@ RUN mv $PG_CLUSTER_PATH $PG_CLUSTER_TMP
 # In addition to the cluster directory, its associated config
 # directory is also moved to a non-default location here:
 #
-ENV PG_CONFIG_TMP=$(mktemp -d)
-ENV PG_CONFIG_PATH="/etc/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME"
+ENV PG_CONFIG_TMP $(mktemp -d)
+ENV PG_CONFIG_PATH /etc/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME
 RUN echo "Moving existing database cluster to $PG_CONFIG_TMP ..."
 RUN mv $PG_CONFIG_PATH $PG_CONFIG_TMP
 
