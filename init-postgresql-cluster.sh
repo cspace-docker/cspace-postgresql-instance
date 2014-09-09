@@ -34,7 +34,9 @@ echo "Checking for required PostgreSQL clustername in environment variable ..."
 
 #
 # Initialize the PostgreSQL database cluster, if and only if
-# it hasn't already been initialized.
+# it hasn't already been initialized in the specified location;
+# i.e. if there isn't already a (non-empty) database cluster
+# directory present in that location.
 #
 echo "Checking for existence of a PostgreSQL database cluster ..."
 PG_CLUSTER_PATH="/var/lib/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME"
@@ -45,31 +47,36 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     echo "Initializing the PostgreSQL database cluster at $PG_CLUSTER_PATH ..."
     command -v pg_createcluster || (c=$?; echo "Could not find 'pg_createcluster' command"; $(exit $c))
     pg_createcluster $PG_MAJOR $PG_CLUSTER_NAME || (c=$?; echo "Could not initialize PostgreSQL database cluster"; $(exit $c))
+    #
+    # Adjust the PostgreSQL host-based access configuration to enable
+    # remote connections to the database.
+    #
+    # IMPORTANT: This configuration makes the database
+    # world-accessible (within whatever access limitations might
+    # externally be imposed by Docker and/or the Docker host).
+    #
+    # TODO: Replace this permissive configuration with a more
+    # secure, recommended configuration for CollectionSpace 
+    # PostgreSQL servers.
+    #
+    # TODO: This is a primitive way of setting configuration.
+    # Consider using Augeas, 'sed', etc.
+    #
+    PG_CONFIG_PATH="/etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME"
+    echo "host all  all    0.0.0.0/0  md5" >> $PG_CONFIG_PATH/pg_hba.conf
+    #
+    # Adjust PostgreSQL's configuration to allow for incoming
+    # connections from all addresses
+    #
+    # TODO: Replace this permissive configuration with a more
+    # secure, recommended configuration for CollectionSpace 
+    # PostgreSQL servers.
+    #
+    # TODO: This is a primitive way of setting configuration.
+    # Consider using Augeas, 'sed', etc.
+    #
+    echo "listen_addresses='*'" >> $PG_CONFIG_PATH/postgresql.conf
 fi
-
-#
-# Adjust the PostgreSQL host-based access configuration to enable
-# remote connections to the database.
-#
-# IMPORTANT: This configuration makes the database
-# world-accessible (within whatever access limitations might
-# externally be imposed by Docker and/or the Docker host).
-#
-# TODO: Replace this permissive configuration with a more
-# secure, recommended configuration for CollectionSpace 
-# PostgreSQL servers.
-#
-echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME/pg_hba.conf
-
-#
-# Adjust PostgreSQL's configuration to allow for incoming
-# connections from all addresses
-#
-# TODO: Replace this permissive configuration with a more
-# secure, recommended configuration for CollectionSpace 
-# PostgreSQL servers.
-#
-echo "listen_addresses='*'" >> /etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME/postgresql.conf
 
 #
 # Start the PostgreSQL server.
@@ -79,13 +86,15 @@ pg_ctlcluster $PG_MAJOR $PG_CLUSTER_NAME start \
    || (c=$?; echo "Could not start PostgreSQL server"; $(exit $c))
 
 #
-# Create a PostgreSQL role for the CollectionSpace database administrator
-# user, if that role doesn't already exist.
+# Create a PostgreSQL role (user account) for the CollectionSpace
+# database administrator user, if that role doesn't already exist.
 #
 # See http://stackoverflow.com/questions/8546759/how-to-check-if-a-postgres-user-exists
 #
 # TODO: Replace the SUPERUSER-enabled role below with only a subset of
 # superuser privileges.
+#
+# TODO: Create a database with a name identical to this role.
 #
 echo "Checking for required username/password in environment variables ..."
 [ -z "$DB_CSPACE_ADMIN_NAME" ] && echo "Script requires a DB_CSPACE_ADMIN_NAME environment variable" && exit 1;

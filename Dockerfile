@@ -27,6 +27,8 @@
 
 FROM ubuntu:14.04
 
+ENV PG_DEFAULT_CLUSTER_NAME main
+
 #
 # Set the username and password for a dedicated database user
 # for administering CollectionSpace.
@@ -46,7 +48,7 @@ ENV PG_MAJOR 9.3
 #
 # Set the desired PostgreSQL cluster name. (Default: 'main')
 #
-ENV PG_CLUSTER_NAME main
+ENV PG_CLUSTER_NAME $PG_DEFAULT_CLUSTER_NAME
 
 #
 # Set the desired locale for a UTF-8 character encoding.
@@ -86,7 +88,7 @@ RUN apt-get update
 
 #
 # Add a policy rule script that prevents package installation of PostgreSQL
-# from initializing a database cluster and launching the PostgreSQL server.
+# from launching the PostgreSQL server.
 #
 ADD policy-rc.d /usr/sbin/policy-rc.d
 RUN chmod u+x /usr/sbin/policy-rc.d
@@ -102,6 +104,30 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y -q install \
   postgresql-$PG_MAJOR \
   postgresql-client-$PG_MAJOR \
   postgresql-contrib-$PG_MAJOR
+
+#
+# Installation of the PostgreSQL server from its Ubuntu package
+# appears to initialize a database cluster at a default location,
+# even if the PostgreSQL server isn't started.
+#
+# Move this newly-initialized cluster's directory to a non-default
+# location, so that it won't be used. (Moving the cluster, rather
+# than dropping it via pg_dropcluster, is also prudent to avoid
+# the possibility of deleting a cluster that contains valued data.)
+#
+ENV PG_CLUSTER_TMP=$(mktemp -d)
+ENV PG_CLUSTER_PATH="/var/lib/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME"
+RUN echo "Moving existing database cluster to $PG_CLUSTER_TMP ..."
+RUN mv $PG_CLUSTER_PATH $PG_CLUSTER_TMP
+
+#
+# In addition to the cluster directory, its associated config
+# directory is also moved to a non-default location here:
+#
+ENV PG_CONFIG_TMP=$(mktemp -d)
+ENV PG_CONFIG_PATH="/etc/postgresql/$PG_MAJOR/$PG_DEFAULT_CLUSTER_NAME"
+RUN echo "Moving existing database cluster to $PG_CONFIG_TMP ..."
+RUN mv $PG_CONFIG_PATH $PG_CONFIG_TMP
 
 #
 # Expose the standard PostgreSQL listening port from the container.
