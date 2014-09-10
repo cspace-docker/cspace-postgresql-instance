@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
 
-# Perform one-time initialization of a PostgreSQL database cluster
-# for use with CollectionSpace
+#
+# Startup script for the PostgreSQL Server
+# Docker container for CollectionSpace
+#
+
+#
+# This script has two functions:
+#
+# 1. If a PostgreSQL database cluster for
+# CollectionSpace is not present, perform
+# a one-time initialization of that cluster.
+#
+# 2. Start the PostgreSQL server.
+#
 
 # See http://stackoverflow.com/a/1379904
 # and the earliest posted comment on
@@ -12,6 +24,16 @@ set -x
 
 # Halt execution when the first non-success exit code is encountered.
 set -e
+
+start_postgresql_server()
+{
+  #
+  # Start the PostgreSQL server.
+  #
+  echo "Starting the PostgreSQL server ..."
+  pg_ctlcluster $PG_MAJOR $PG_CLUSTER_NAME start \
+     || (c=$?; echo "Could not start PostgreSQL server"; $(exit $c))
+}
 
 #
 # Verify that this script is being run as 'root'
@@ -38,15 +60,22 @@ echo "Checking for required PostgreSQL clustername in environment variable ..."
 # i.e. if there isn't already a (non-empty) database cluster
 # directory present in that location.
 #
+# Then start the PostgreSQL server.
+#
 echo "Checking for existence of a PostgreSQL database cluster ..."
 PG_CLUSTER_PATH="/var/lib/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME"
 if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
   then
+    
     echo "Existing PostgreSQL database cluster found at $PG_CLUSTER_PATH ..."
+    start_postgresql_server()
+    
   else
+    
     echo "Initializing the PostgreSQL database cluster at $PG_CLUSTER_PATH ..."
     command -v pg_createcluster || (c=$?; echo "Could not find 'pg_createcluster' command"; $(exit $c))
     pg_createcluster $PG_MAJOR $PG_CLUSTER_NAME || (c=$?; echo "Could not initialize PostgreSQL database cluster"; $(exit $c))
+ 
     #
     # Adjust the PostgreSQL host-based access configuration to enable
     # remote connections to the database.
@@ -64,6 +93,7 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     #
     PG_CONFIG_PATH="/etc/postgresql/$PG_MAJOR/$PG_CLUSTER_NAME"
     echo "host all  all    0.0.0.0/0  md5" >> $PG_CONFIG_PATH/pg_hba.conf
+    
     #
     # Adjust PostgreSQL's configuration to allow for incoming
     # connections from all addresses
@@ -76,39 +106,44 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     # Consider using Augeas, 'sed', etc.
     #
     echo "listen_addresses='*'" >> $PG_CONFIG_PATH/postgresql.conf
-fi
-
-#
-# Start the PostgreSQL server.
-#
-echo "Starting the PostgreSQL server ..."
-pg_ctlcluster $PG_MAJOR $PG_CLUSTER_NAME start \
-   || (c=$?; echo "Could not start PostgreSQL server"; $(exit $c))
-
-#
-# Create a PostgreSQL role (user account) for the CollectionSpace
-# database administrator user, if that role doesn't already exist.
-#
-# See http://stackoverflow.com/questions/8546759/how-to-check-if-a-postgres-user-exists
-#
-# TODO: Replace the SUPERUSER-enabled role below with only a subset of
-# superuser privileges.
-#
-# TODO: Create a database with a name identical to this role.
-#
-echo "Checking for required username/password in environment variables ..."
-[ -z "$DB_CSPACE_ADMIN_NAME" ] && echo "Script requires a DB_CSPACE_ADMIN_NAME environment variable" && exit 1;
-[ -z "$DB_CSPACE_ADMIN_PASSWORD" ] && echo "Script requires a DB_CSPACE_ADMIN_PASSWORD environment variable" && exit 1;
-
-echo "Creating CollectionSpace database admin user, if not already present ..."
-CSADMIN_TMPFILE=/tmp/csadmin-exists
-sudo -u postgres -s psql --tuples-only --no-align \
-  --command "SELECT 1 FROM pg_roles WHERE rolname='$DB_CSPACE_ADMIN_NAME'" > $CSADMIN_TMPFILE
-if [ -z $(cat $CSADMIN_TMPFILE) ];
-  then
+    
+    #
+    # Start the PostgreSQL server.
+    #
+    start_postgresql_server()
+    
+    #
+    # Create a PostgreSQL role (user account) for the CollectionSpace
+    # database administrator user.
+    #
+    # TODO: Replace the SUPERUSER-enabled role below with only a subset of
+    # superuser privileges.
+    #
+    # TODO: Create a database with a name identical to this role.
+    #
+    echo "Checking for required username/password in environment variables ..."
+    [ -z "$DB_CSPACE_ADMIN_NAME" ] && echo "Script requires a DB_CSPACE_ADMIN_NAME environment variable" && exit 1;
+    [ -z "$DB_CSPACE_ADMIN_PASSWORD" ] && echo "Script requires a DB_CSPACE_ADMIN_PASSWORD environment variable" && exit 1;
+    
+    #
+    # TODO (optional): Verify that the role to be created doesn't yet exist.
+    # Placeholder code to do this - not working - appears below.
+    #
+    # See http://stackoverflow.com/questions/8546759/how-to-check-if-a-postgres-user-exists
+    #
+    # CSADMIN_TMPFILE=/tmp/csadmin-exists
+    # sudo -u postgres -s psql --tuples-only --no-align \
+    #   --command "SELECT 1 FROM pg_roles WHERE rolname='$DB_CSPACE_ADMIN_NAME'" > $CSADMIN_TMPFILE
+    # if [ -z $(cat $CSADMIN_TMPFILE) ];
+    #   then
+    # fi
+ 
+    echo "Creating CollectionSpace database admin user, if not already present ..."
     sudo -u postgres -s psql --command \
-      "CREATE USER $DB_CSPACE_ADMIN_NAME WITH SUPERUSER PASSWORD '$DB_CSPACE_ADMIN_PASSWORD';"
+       "CREATE USER $DB_CSPACE_ADMIN_NAME WITH SUPERUSER PASSWORD '$DB_CSPACE_ADMIN_PASSWORD';"   
+    
 fi
+
 
 
 
