@@ -76,26 +76,6 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     # Consider using Augeas, 'sed', etc.
     #
     echo "listen_addresses='*'" >> $PG_CONFIG_PATH/postgresql.conf
-    #
-    # Create a PostgreSQL role (user account) for the CollectionSpace
-    # database administrator user, if that role doesn't already exist.
-    #
-    # See http://stackoverflow.com/questions/8546759/how-to-check-if-a-postgres-user-exists
-    #
-    # TODO: Replace the SUPERUSER-enabled role below with only a subset of
-    # superuser privileges.
-    #
-    # TODO: Create a database with a name identical to this role.
-    #
-    echo "Checking for required username/password in environment variables ..."
-    [ -z "$DB_CSPACE_ADMIN_NAME" ] && echo "Script requires a DB_CSPACE_ADMIN_NAME environment variable" && exit 1;
-    [ -z "$DB_CSPACE_ADMIN_PASSWORD" ] && echo "Script requires a DB_CSPACE_ADMIN_PASSWORD environment variable" && exit 1;
-
-    # FIXME: The following check may not be working successfully.
-    echo "Creating CollectionSpace database admin user, if not already present ..."
-    sudo -u postgres -s psql --tuples-only --no-align --command "SELECT 1 FROM pg_roles WHERE rolname='$DB_CSPACE_ADMIN_NAME'" | grep -q 1 || \
-      sudo -u postgres -s psql --command \
-        "CREATE USER $DB_CSPACE_ADMIN_NAME WITH SUPERUSER PASSWORD '$DB_CSPACE_ADMIN_PASSWORD';"
 fi
 
 #
@@ -105,6 +85,30 @@ echo "Starting the PostgreSQL server ..."
 pg_ctlcluster $PG_MAJOR $PG_CLUSTER_NAME start \
    || (c=$?; echo "Could not start PostgreSQL server"; $(exit $c))
 
+#
+# Create a PostgreSQL role (user account) for the CollectionSpace
+# database administrator user, if that role doesn't already exist.
+#
+# See http://stackoverflow.com/questions/8546759/how-to-check-if-a-postgres-user-exists
+#
+# TODO: Replace the SUPERUSER-enabled role below with only a subset of
+# superuser privileges.
+#
+# TODO: Create a database with a name identical to this role.
+#
+echo "Checking for required username/password in environment variables ..."
+[ -z "$DB_CSPACE_ADMIN_NAME" ] && echo "Script requires a DB_CSPACE_ADMIN_NAME environment variable" && exit 1;
+[ -z "$DB_CSPACE_ADMIN_PASSWORD" ] && echo "Script requires a DB_CSPACE_ADMIN_PASSWORD environment variable" && exit 1;
+
+echo "Creating CollectionSpace database admin user, if not already present ..."
+CSADMIN_TMPFILE=/tmp/csadmin-exists
+sudo -u postgres -s psql --tuples-only --no-align \
+  --command "SELECT 1 FROM pg_roles WHERE rolname='$DB_CSPACE_ADMIN_NAME'" > $CSADMIN_TMPFILE
+if [ -z $(cat $CSADMIN_TMPFILE) ];
+  then
+    sudo -u postgres -s psql --command \
+      "CREATE USER $DB_CSPACE_ADMIN_NAME WITH SUPERUSER PASSWORD '$DB_CSPACE_ADMIN_PASSWORD';"
+fi
 
 
 
