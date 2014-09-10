@@ -68,7 +68,7 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
   then
     
     echo "Existing PostgreSQL database cluster found at $PG_CLUSTER_PATH ..."
-    start_postgresql_server()
+    start_postgresql_server
     
   else
     
@@ -110,7 +110,7 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     #
     # Start the PostgreSQL server.
     #
-    start_postgresql_server()
+    start_postgresql_server
     
     #
     # Create a PostgreSQL role (user account) for the CollectionSpace
