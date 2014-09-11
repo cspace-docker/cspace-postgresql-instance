@@ -144,6 +144,26 @@ if test "$(ls -A $PG_CLUSTER_PATH 2>/dev/null)";
     
 fi
 
+# Keep this shell script running even after the PostgreSQL
+# server has been started, to ensure that the Docker
+# container doesn't quit on script exit.
+#
+# See http://stackoverflow.com/questions/9052847/implementing-infinite-wait-in-shell-scripting
+#
 
+#
+# Make a named pipe.
+#
+mkfifo /tmp/mypipe
+#
+# Loop until an exit signal is received.
+#
+while read SIGNAL; do
+    case "$SIGNAL" in
+        # Handles all exit signals, including SIGTERM
+        *EXIT*) break;;
+        *) echo "signal $SIGNAL is unsupported" >/dev/stderr;;
+    esac
+done < /tmp/mypipe
 
 
