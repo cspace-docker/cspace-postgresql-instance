@@ -154,6 +154,11 @@ fi
 #
 # Make a named pipe.
 #
+NAMED_PIPE=/tmp/mypipe
+if [ -e $NAMED_PIPE ];
+  then
+    rm $NAMED_PIPE
+fi
 mkfifo /tmp/mypipe
 #
 # Loop until an exit signal is received.
